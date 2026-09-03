@@ -2,7 +2,6 @@
   "name": "projecttaskmanager",
   "version": "1.0.0",
   "description": "A production-minded, full-stack application for managing engineering projects and their associated work items (tasks). Built with an **ASP.NET Core 9** Web API backend, **Entity Framework Core 9 (Code First)**, **SQL Server**, and a modern **React 18 + TypeScript + Vite + Tailwind CSS** frontend.",
-  "main": "index.js",
   "directories": {
     "test": "tests"
   },
