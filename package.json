@@ -1,0 +1,19 @@
+{
+  "name": "projecttaskmanager",
+  "version": "1.0.0",
+  "description": "A production-minded, full-stack application for managing engineering projects and their associated work items (tasks). Built with an **ASP.NET Core 9** Web API backend, **Entity Framework Core 9 (Code First)**, **SQL Server**, and a modern **React 18 + TypeScript + Vite + Tailwind CSS** frontend.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "dev": "concurrently -n API,CLIENT -c blue,green \"dotnet run --project src/ProjectTaskManager.Api\" \"npm run dev --prefix client\"",
+    "start:windows": "powershell -ExecutionPolicy Bypass -File start-dev.ps1",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}
