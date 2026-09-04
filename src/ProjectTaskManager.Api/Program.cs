@@ -10,19 +10,31 @@ using ProjectTaskManager.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Add DbContext with SQL Server
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("DefaultConnection string is not configured.");
+// 1. Add DbContext (Supports both SQL Server and PostgreSQL)
+var (dbProvider, effectiveConnectionString) = ResolveDatabaseConfig(builder.Configuration);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseSqlServer(connectionString, sqlOptions =>
+    if (dbProvider == "PostgreSQL")
     {
-        sqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 5,
-            maxRetryDelay: TimeSpan.FromSeconds(30),
-            errorNumbersToAdd: null);
-    });
+        options.UseNpgsql(effectiveConnectionString, npgsqlOptions =>
+        {
+            npgsqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(30),
+                errorCodesToAdd: null);
+        });
+    }
+    else
+    {
+        options.UseSqlServer(effectiveConnectionString, sqlOptions =>
+        {
+            sqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(30),
+                errorNumbersToAdd: null);
+        });
+    }
 });
 builder.Services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<AppDbContext>());
 
@@ -130,7 +142,8 @@ try
     await SeedData.InitializeAsync(app.Services);
     app.Logger.LogInformation("Database migrated and seeded successfully.");
     app.Logger.LogInformation("==================================================================");
-    app.Logger.LogInformation( "FRONTEND WEB UI:   http://localhost:5173");
+    app.Logger.LogInformation($"DATABASE PROVIDER: {dbProvider}");
+    app.Logger.LogInformation("FRONTEND WEB UI:   http://localhost:5173");
     app.Logger.LogInformation("SWAGGER API DOCS:  http://localhost:5184/swagger");
     app.Logger.LogInformation("==================================================================");
 }
@@ -140,3 +153,55 @@ catch (Exception ex)
 }
 
 app.Run();
+
+// Helper to determine whether to use PostgreSQL or SQL Server based on configuration / environment
+static (string Provider, string ConnectionString) ResolveDatabaseConfig(IConfiguration configuration)
+{
+    // 1. Check Railway / Cloud standard DATABASE_URL or DATABASE_PUBLIC_URL environment variable
+    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL")
+                   ?? Environment.GetEnvironmentVariable("DATABASE_PUBLIC_URL");
+
+    if (!string.IsNullOrWhiteSpace(databaseUrl))
+    {
+        return ("PostgreSQL", ConvertPostgresUrlToConnectionString(databaseUrl));
+    }
+
+    // 2. Check ConnectionStrings:DefaultConnection
+    var defaultConn = configuration.GetConnectionString("DefaultConnection") ?? string.Empty;
+
+    if (defaultConn.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
+        defaultConn.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+    {
+        return ("PostgreSQL", ConvertPostgresUrlToConnectionString(defaultConn));
+    }
+
+    if (defaultConn.Contains("Host=", StringComparison.OrdinalIgnoreCase) ||
+        defaultConn.Contains("Port=5432", StringComparison.OrdinalIgnoreCase) ||
+        defaultConn.Contains("Username=", StringComparison.OrdinalIgnoreCase))
+    {
+        return ("PostgreSQL", defaultConn);
+    }
+
+    // Default to SQL Server
+    return ("SqlServer", defaultConn);
+}
+
+static string ConvertPostgresUrlToConnectionString(string url)
+{
+    try
+    {
+        var uri = new Uri(url);
+        var userInfo = uri.UserInfo.Split(':');
+        var user = userInfo[0];
+        var pass = userInfo.Length > 1 ? userInfo[1] : string.Empty;
+        var host = uri.Host;
+        var port = uri.Port > 0 ? uri.Port : 5432;
+        var database = uri.AbsolutePath.TrimStart('/');
+
+        return $"Host={host};Port={port};Database={database};Username={user};Password={pass};SSL Mode=Prefer;Trust Server Certificate=true";
+    }
+    catch
+    {
+        return url;
+    }
+}

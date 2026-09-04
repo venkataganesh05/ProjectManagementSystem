@@ -11,8 +11,15 @@ public static class SeedData
         using var scope = serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        // Ensure database is created and migrations applied
-        await context.Database.MigrateAsync();
+        // Ensure database is created and schema ready
+        if (context.Database.IsNpgsql())
+        {
+            await context.Database.EnsureCreatedAsync();
+        }
+        else
+        {
+            await context.Database.MigrateAsync();
+        }
 
         if (await context.Projects.AnyAsync())
         {
