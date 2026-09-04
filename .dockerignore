@@ -1,0 +1,11 @@
+﻿**/.git
+**/.vs
+**/bin
+**/obj
+**/node_modules
+**/dist
+**/.env
+**/.env.local
+**/.env.*.local
+appsettings.Development.json
+TestResults/

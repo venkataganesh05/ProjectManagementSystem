@@ -69,45 +69,58 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// Respect PORT environment variable if running on Railway, Render, or Docker
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 var app = builder.Build();
 
 // 7. Global Exception Handling Middleware
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-// Enable CORS at the very beginning of the pipeline
+// Enable CORS
 app.UseCors("AllowFrontend");
 
-// In development, do not force HTTPS redirection so HTTP frontend calls work smoothly without certificate errors
-if (!app.Environment.IsDevelopment())
+// Only redirect HTTPS if not in development and not behind a container proxy
+if (!app.Environment.IsDevelopment() && string.IsNullOrEmpty(port))
 {
     app.UseHttpsRedirection();
 }
 
-// 8. Swagger in Development and Staging
-if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
+// 8. Swagger
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Project & Task Management API v1");
-        c.RoutePrefix = "swagger";
-    });
-}
-
-// Redirect bare root "/" to Swagger UI via middleware — not registered as an endpoint so it won't appear in Swagger docs
-app.Use(async (context, next) =>
-{
-    if (context.Request.Path == "/")
-    {
-        context.Response.Redirect("/swagger");
-        return;
-    }
-    await next();
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Project & Task Management API v1");
+    c.RoutePrefix = "swagger";
 });
+
+// Serve frontend static files from wwwroot
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
 app.UseAuthorization();
 
 app.MapControllers();
+
+// SPA fallback: serve index.html if present, else redirect to Swagger
+app.MapFallback(async context =>
+{
+    var webRoot = app.Environment.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot");
+    var indexPath = Path.Combine(webRoot, "index.html");
+    if (File.Exists(indexPath))
+    {
+        context.Response.ContentType = "text/html";
+        await context.Response.SendFileAsync(indexPath);
+    }
+    else
+    {
+        context.Response.Redirect("/swagger");
+    }
+});
 
 // 9. Auto-migrate and Seed Database on startup
 try
