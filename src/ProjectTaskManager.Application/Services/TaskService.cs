@@ -144,7 +144,7 @@ public class TaskService : ITaskService
             Description = dto.Description?.Trim(),
             Status = dto.Status,
             Priority = dto.Priority,
-            DueDate = dto.DueDate,
+            DueDate = dto.DueDate.HasValue ? DateTime.SpecifyKind(dto.DueDate.Value, DateTimeKind.Utc) : null,
             AssigneeName = dto.AssigneeName?.Trim(),
             AssigneeEmail = dto.AssigneeEmail?.Trim(),
             CreatedAt = DateTime.UtcNow
@@ -179,7 +179,7 @@ public class TaskService : ITaskService
         task.Description = dto.Description?.Trim();
         task.Status = dto.Status;
         task.Priority = dto.Priority;
-        task.DueDate = dto.DueDate;
+        task.DueDate = dto.DueDate.HasValue ? DateTime.SpecifyKind(dto.DueDate.Value, DateTimeKind.Utc) : null;
         task.AssigneeName = dto.AssigneeName?.Trim();
         task.AssigneeEmail = dto.AssigneeEmail?.Trim();
         task.UpdatedAt = DateTime.UtcNow;

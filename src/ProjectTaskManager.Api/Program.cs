@@ -8,6 +8,9 @@ using ProjectTaskManager.Middleware;
 using ProjectTaskManager.Services;
 using ProjectTaskManager.Validators;
 
+// Enable flexible DateTime handling in Npgsql for PostgreSQL
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Add DbContext (Supports both SQL Server and PostgreSQL)

@@ -112,8 +112,8 @@ public class ProjectService : IProjectService
             Name = dto.Name.Trim(),
             Description = dto.Description?.Trim(),
             Status = dto.Status,
-            StartDate = dto.StartDate,
-            EndDate = dto.EndDate,
+            StartDate = DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc),
+            EndDate = dto.EndDate.HasValue ? DateTime.SpecifyKind(dto.EndDate.Value, DateTimeKind.Utc) : null,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -148,8 +148,8 @@ public class ProjectService : IProjectService
         project.Name = dto.Name.Trim();
         project.Description = dto.Description?.Trim();
         project.Status = dto.Status;
-        project.StartDate = dto.StartDate;
-        project.EndDate = dto.EndDate;
+        project.StartDate = DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc);
+        project.EndDate = dto.EndDate.HasValue ? DateTime.SpecifyKind(dto.EndDate.Value, DateTimeKind.Utc) : null;
         project.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
